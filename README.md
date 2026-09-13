@@ -27,7 +27,7 @@ The library provides:
 
 Based on:
 
-> Wang, H. (2026). *A Computational Systems Model of Multi-Level Governance: Extending the General Governance Success Model with a Bounded Non-Exploitation Constraint.* Systems Research and Behavioral Science.
+> Wang, H. (2026). *A Computational Systems Model of Multi-Level Governance for Human Flourishing under Bounded Non-Exploitation Constraint.* preprint.
 
 ---
 
