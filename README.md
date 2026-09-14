@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](https://github.com/harriswang/gsm-governance/releases)
 [![Status](https://img.shields.io/badge/status-alpha-orange.svg)](#project-status)
-[![DOI](https://img.shields.io/badge/DOI-10.20944%2Fpreprints202609.0233.v1-blue)](https://doi.org/10.20944/preprints202609.0233.v1)
+[![DOI](https://img.shields.io/badge/DOI-10.20944%2Fpreprints202609.0233.v1-blue)](https://doi.org/10.20944/preprints202609.0233.v2)
 
 ---
 
