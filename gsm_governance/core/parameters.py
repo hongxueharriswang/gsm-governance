@@ -1,39 +1,273 @@
+"""
+Configuration parameters for GSM-J.
+
+This module holds:
+  * Enumerations (C4Mode, MJRegime, EnforcementMode)
+  * The dimension and capability constants
+  * GSMConfig: the full parameter set (normative + structural)
+  * JusticeInteractionMatrix: the M_J coupling matrix
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import Enum
 
 import numpy as np
 
-CAPABILITIES=("accountability","competence","cohesion","continuity","learning")
-FLOURISHING_DIMENSIONS=("economic","quality","wellbeing","sustainability")
-N_CAPABILITIES=5; N_FLOURISHING=4
+# ===========================================================================
+# Constants
+# ===========================================================================
 
-def _default_kappa():
-    x=np.zeros((5,5)); x[np.triu_indices(5,1)]=0.005; return x+x.T
+JUSTICE_DIMENSIONS: tuple[str, ...] = (
+    "distributive",
+    "procedural",
+    "recognition",
+    "corrective",
+    "intergenerational",
+)
 
-@dataclass
-class WelfareWeights:
-    theta_g: float=0.5; theta_f: float=0.5
-    def __post_init__(self):
-        if min(self.theta_g,self.theta_f)<0 or not np.isclose(self.theta_g+self.theta_f,1): raise ValueError("Welfare weights must be non-negative and sum to 1.")
+BASE_CAPABILITIES: tuple[str, ...] = ("A", "C", "S", "T", "L")
 
-@dataclass
-class LevelParameters:
-    depreciation_g: np.ndarray | None=None; depreciation_f: np.ndarray | None=None
-    eta: float=.10; B_fg: np.ndarray | None=None; kappa_M: float=.05; A_g: np.ndarray | None=None
-    mu: float=.20; K_g: np.ndarray | None=None; zeta: float=.15; C_gf: np.ndarray | None=None
-    xi: float=.10; d_f: np.ndarray | None=None; delta: float=.10; S: np.ndarray | None=None
-    noise_g: float=0.; noise_f: float=0.
-    def resolved(self):
-        return LevelParameters(np.full(5,.02) if self.depreciation_g is None else np.asarray(self.depreciation_g),np.full(4,.02) if self.depreciation_f is None else np.asarray(self.depreciation_f),self.eta,np.eye(5,4)*.05 if self.B_fg is None else self.B_fg,self.kappa_M,np.eye(5) if self.A_g is None else self.A_g,self.mu,np.eye(5) if self.K_g is None else self.K_g,self.zeta,np.eye(4,5)*.05 if self.C_gf is None else self.C_gf,self.xi,np.ones(4) if self.d_f is None else self.d_f,self.delta,self.S,self.noise_g,self.noise_f)
+INTERVENTION_CHANNELS: tuple[str, ...] = ("C", "S", "T", "A")
+
+EPS: float = 1e-9
+
+
+# ===========================================================================
+# Enumerations
+# ===========================================================================
+
+class C4Mode(Enum):
+    """Vertical alignment (subsidiarity) constraint formulation."""
+    PER_DIMENSION = "per_dimension"
+    AGGREGATE = "aggregate"
+    HYBRID = "hybrid"
+
+
+class MJRegime(Enum):
+    """Estimation regime for the justice interaction matrix."""
+    SYMMETRIC = "symmetric"
+    ASYMMETRIC = "asymmetric"
+
+
+class EnforcementMode(Enum):
+    """Constraint enforcement mode (manuscript §6.4)."""
+    PROJECTION = "A"
+    PENALTY = "B"
+    HYBRID = "hybrid"
+
+
+# ===========================================================================
+# GSMConfig
+# ===========================================================================
 
 @dataclass
 class GSMConfig:
-    alpha: np.ndarray=field(default_factory=lambda:np.full(5,.2)); kappa: np.ndarray=field(default_factory=_default_kappa)
-    gamma: np.ndarray=field(default_factory=lambda:np.full(4,.25)); omega: np.ndarray | None=None; nu: np.ndarray | None=None
-    lambda_1: float=.05; lambda_2: float=.005; lambda_3: float=.5; rho: float=.1
-    welfare_weights: WelfareWeights=field(default_factory=WelfareWeights)
-    def __post_init__(self):
-        self.alpha=np.asarray(self.alpha,float); self.kappa=np.asarray(self.kappa,float); self.gamma=np.asarray(self.gamma,float)
-        if self.alpha.shape!=(5,) or self.kappa.shape!=(5,5) or self.gamma.shape!=(4,): raise ValueError("Invalid parameter dimensions.")
-        if not np.isclose(self.gamma.sum(),1): raise ValueError("gamma must sum to 1.")
+    """
+    Full parameter set for a GSM-J simulation.
+
+    Grouped into two conceptually distinct blocks:
+      * Structural parameters — describe system dynamics (calibratable)
+      * Normative parameters — encode value judgments (must be justified)
+
+    Every study should document the normative parameter choices.
+    See manuscript Appendix B for the reporting checklist.
+    """
+
+    # ---- structural: hierarchy -------------------------------------------
+    n_levels: int = 6
+    dt: float = 0.05
+
+    # ---- structural: base capability dynamics ----------------------------
+    capability_coupling: dict[str, float] = field(default_factory=lambda: {
+        "A": 0.05, "C": 0.05, "S": 0.05, "T": 0.05, "L": 0.05,
+    })
+
+    # ---- structural: justice dynamics ------------------------------------
+    eta: float = 0.20                                # horizontal diffusion
+    kappa_d: dict[str, float] = field(default_factory=lambda: {
+        d: 0.05 for d in JUSTICE_DIMENSIONS
+    })
+    alpha_d: dict[str, float] = field(default_factory=lambda: {
+        "distributive":      0.30,
+        "procedural":        0.30,
+        "recognition":       0.25,
+        "corrective":        0.20,
+        "intergenerational": 0.35,
+    })
+    alpha_corrective_restorative: float = 0.30
+    beta_erosion: dict[str, float] = field(default_factory=lambda: {
+        d: 0.40 for d in JUSTICE_DIMENSIONS
+    })
+    beta_compensation: dict[str, float] = field(default_factory=lambda: {
+        d: 0.50 for d in JUSTICE_DIMENSIONS
+    })
+
+    # ---- structural: cross-level accountability --------------------------
+    lam_c: float = 0.15
+
+    # ---- structural: justice suppression of exploitation -----------------
+    mu: float = 0.25
+
+    # ---- structural: policy intervention ---------------------------------
+    intervention_cost: float = 0.10
+    intervention_horizon: int = 5
+    intervention_weights: dict[str, float] = field(default_factory=lambda: {
+        "C": 0.50, "S": 0.25, "T": 0.15, "A": 0.10,
+    })
+    recovery: dict[str, float] = field(default_factory=lambda: {
+        "C": 0.05, "S": 0.05, "T": 0.05, "A": 0.05,
+    })
+    enforcement_mode: EnforcementMode = EnforcementMode.HYBRID
+
+    # ---- normative: justice weights and floors ---------------------------
+    justice_weights: dict[str, float] = field(default_factory=lambda: {
+        "distributive": 0.25,
+        "procedural": 0.20,
+        "recognition": 0.20,
+        "corrective": 0.15,
+        "intergenerational": 0.20,
+    })
+    justice_floors: dict[str, float] = field(default_factory=lambda: {
+        "distributive": 0.30,
+        "procedural": 0.25,
+        "recognition": 0.25,
+        "corrective": 0.10,
+        "intergenerational": 0.20,
+    })
+    aggregate_floor: float = 0.30
+
+    # ---- normative: welfare coefficients ---------------------------------
+    gamma_dim: dict[str, float] | None = None
+    delta_dim: dict[str, float] | None = None
+
+    # ---- normative: accountability penalties -----------------------------
+    lambda_p_dim: dict[str, float] = field(default_factory=lambda: {
+        "distributive": 0.30,
+        "procedural": 0.30,
+        "recognition": 0.45,
+        "corrective": 0.20,
+        "intergenerational": 0.35,
+    })
+
+    # ---- normative: subsidiarity -----------------------------------------
+    phi: float = 0.85
+    c4_mode: C4Mode = C4Mode.PER_DIMENSION
+
+    # ---- normative: tolerance thresholds ---------------------------------
+    tau: dict[str, float] = field(default_factory=dict)
+
+    # ---- derived (populated in __post_init__) ----------------------------
+    def __post_init__(self) -> None:
+        if self.gamma_dim is None:
+            self.gamma_dim = {
+                d: 0.75 * self.justice_weights[d] for d in JUSTICE_DIMENSIONS
+            }
+        if self.delta_dim is None:
+            self.delta_dim = {
+                d: 2.0 * self.justice_weights[d] for d in JUSTICE_DIMENSIONS
+            }
+        self.validate()
+
+    def validate(self) -> None:
+        """Raise ValueError if parameters are inconsistent."""
+        w_sum = sum(self.justice_weights.values())
+        if abs(w_sum - 1.0) > 1e-6:
+            raise ValueError(
+                f"justice_weights must sum to 1, got {w_sum:.6f}"
+            )
+        for d in JUSTICE_DIMENSIONS:
+            if self.justice_weights[d] < 0:
+                raise ValueError(f"weight for {d} must be non-negative")
+            if self.justice_floors[d] < 0:
+                raise ValueError(f"floor for {d} must be non-negative")
+            if self.delta_dim[d] <= self.gamma_dim[d]:
+                raise ValueError(
+                    f"prioritarian penalty must exceed welfare weight "
+                    f"for {d} ({self.delta_dim[d]} <= {self.gamma_dim[d]})"
+                )
+        iw_sum = sum(self.intervention_weights.values())
+        if abs(iw_sum - 1.0) > 1e-6:
+            raise ValueError(
+                f"intervention_weights must sum to 1, got {iw_sum:.6f}"
+            )
+
+    def justify_floor(self, dimension: str, tradition: str) -> str:
+        """Return a human-readable justification string for a floor."""
+        if tradition not in ("sufficientarian", "capability", "human_rights"):
+            raise ValueError(f"unrecognized normative tradition: {tradition}")
+        return (
+            f"{dimension}={self.justice_floors[dimension]:.3f} "
+            f"justified by {tradition} framework"
+        )
+
+    @classmethod
+    def default_demo(cls) -> GSMConfig:
+        """Return the default configuration used in the demonstration."""
+        return cls()
+
+
+# ===========================================================================
+# JusticeInteractionMatrix
+# ===========================================================================
+
+@dataclass
+class JusticeInteractionMatrix:
+    """
+    Signed matrix M_J capturing synergies and tensions between justice
+    dimensions.
+
+    Coupling term for target dimension d:
+        C_J^d(J) = sum_{e != d} m_{de} * J_e * (1 - J_d)
+
+    Positive m: synergy.  Negative m: tension.  Bounded by m_max.
+    """
+
+    m: dict[tuple[str, str], float] = field(default_factory=lambda: {
+        # Synergies
+        ("procedural", "recognition"):        +0.15,
+        ("recognition", "procedural"):        +0.15,
+        ("distributive", "procedural"):       +0.10,
+        ("procedural", "distributive"):       +0.10,
+        ("distributive", "corrective"):       +0.15,
+        ("corrective", "recognition"):        +0.20,
+        ("recognition", "corrective"):        +0.15,
+        ("intergenerational", "procedural"):  +0.05,
+        # Tensions
+        ("intergenerational", "distributive"): -0.05,
+        ("distributive", "intergenerational"): -0.05,
+        ("corrective", "distributive"):        -0.10,
+        ("procedural", "intergenerational"):   -0.05,
+    })
+    m_max: float = 0.30
+    regime: MJRegime = MJRegime.SYMMETRIC
+
+    def __post_init__(self) -> None:
+        if self.regime == MJRegime.SYMMETRIC:
+            self.symmetrize()
+
+    def _clip(self, v: float) -> float:
+        return float(np.clip(v, -self.m_max, self.m_max))
+
+    def coupling(self, J: dict[str, float], d: str) -> float:
+        """Compute the coupling term for target dimension d."""
+        total = 0.0
+        for (src, tgt), coef in self.m.items():
+            if tgt == d and src in J:
+                total += self._clip(coef) * J[src] * (1.0 - J[d])
+        return total
+
+    def symmetrize(self) -> None:
+        """Average symmetric pairs of coefficients."""
+        keys = list(self.m.keys())
+        for (src, tgt) in keys:
+            if (tgt, src) in self.m:
+                avg = (self.m[(src, tgt)] + self.m[(tgt, src)]) / 2.0
+                self.m[(src, tgt)] = avg
+                self.m[(tgt, src)] = avg
+
+    def copy(self) -> JusticeInteractionMatrix:
+        return JusticeInteractionMatrix(
+            m=dict(self.m), m_max=self.m_max, regime=self.regime
+        )

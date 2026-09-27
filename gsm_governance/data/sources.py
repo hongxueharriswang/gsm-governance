@@ -1,11 +1,47 @@
-from dataclasses import dataclass
-@dataclass(frozen=True)
-class DataSource:
-    name:str; indicator:str; dimension:str; url:str; theoretical_min:float; theoretical_max:float
-SOURCES={
-"accountability":DataSource("V-Dem","Liberal Democracy Index","accountability","https://www.v-dem.net",0,1),
-"competence":DataSource("World Bank WGI","Government Effectiveness","competence","https://info.worldbank.org/governance/wgi/",-2.5,2.5),
-"cohesion":DataSource("World Justice Project","Rule of Law Index","cohesion","https://worldjusticeproject.org",0,1),
-"continuity":DataSource("UNDP","Human Development Index","continuity","https://hdr.undp.org",0,1),
-"learning":DataSource("Our World in Data","Government Service Satisfaction","learning","https://ourworldindata.org",0,100)}
-DENMARK_RAW={"accountability":.883,"competence":2.11,"cohesion":.90,"continuity":.962,"learning":72.4}
+"""
+Metadata for external data sources.  No fetching occurs here; loaders
+are expected to consume locally cached files.
+"""
+
+from __future__ import annotations
+
+from typing import dict
+
+SOURCES: dict[str, dict[str, str]] = {
+    "vdem": {
+        "name": "V-Dem",
+        "url": "https://www.v-dem.net/",
+        "indicators": "procedural justice, accountability",
+    },
+    "wgi": {
+        "name": "World Bank Worldwide Governance Indicators",
+        "url": "https://info.worldbank.org/governance/wgi/",
+        "indicators": "competence, rule of law, voice",
+    },
+    "wjp": {
+        "name": "World Justice Project",
+        "url": "https://worldjusticeproject.org/",
+        "indicators": "procedural justice, corrective justice",
+    },
+    "undp": {
+        "name": "UNDP Human Development Reports",
+        "url": "https://hdr.undp.org/",
+        "indicators": "distributive justice, flourishing",
+    },
+    "owid": {
+        "name": "Our World in Data",
+        "url": "https://ourworldindata.org/",
+        "indicators": "intergenerational justice, sustainability",
+    },
+    "worldbank": {
+        "name": "World Bank Open Data",
+        "url": "https://data.worldbank.org/",
+        "indicators": "distributive justice, competence",
+    },
+}
+
+
+def source_metadata(key: str) -> dict[str, str]:
+    if key not in SOURCES:
+        raise KeyError(f"unknown source: {key}")
+    return dict(SOURCES[key])

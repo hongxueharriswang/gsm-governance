@@ -4,30 +4,50 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gsm-governance"
-version = "0.1.0"
-description = "Multi-level governance modelling with a bounded non-exploitation constraint"
+version = "0.3.0"
+description = "Justice as a Governance Capability: A Computational Systems Model of Multi-Level Governance for Human Flourishing under Bounded Non-Exploitation"
 readme = "README.md"
 requires-python = ">=3.9"
-license = {text = "MIT"}
-authors = [{name = "Harris Wang", email = "harrisw@athabascau.ca"}]
-keywords = ["governance", "cybernetics", "multi-level governance", "human flourishing", "non-exploitation"]
-classifiers = [
-  "Development Status :: 3 - Alpha",
-  "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
+license = { text = "MIT" }
+authors = [{ name = "Hongxue Harris Wang" }]
+keywords = [
+    "multi-level governance", "justice", "bounded non-exploitation",
+    "computational social science", "systems theory", "human flourishing",
 ]
-dependencies = ["numpy>=1.22", "pandas>=1.5", "matplotlib>=3.6"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "numpy>=1.22",
+]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "black>=23", "ruff>=0.1", "mypy>=1"]
+viz = ["matplotlib>=3.5"]
+data = ["pandas>=1.4"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1",
+    "mypy>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/hongxueharriswang/gsm-governance"
+Preprint = "https://doi.org/10.20944/preprints202609.0964.v2"
 
 [tool.setuptools.packages.find]
 include = ["gsm_governance*"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
+[tool.black]
+line-length = 88
+
+[tool.ruff]
+line-length = 88

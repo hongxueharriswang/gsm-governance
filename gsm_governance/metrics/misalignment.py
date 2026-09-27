@@ -1,11 +1,45 @@
+"""
+Misalignment metrics: divergence between jurisdictional justice profiles
+and their parents or peers.
+"""
+
+from __future__ import annotations
+
 import numpy as np
-def context_sensitive_misalignment(g,target,W=None):
-    d=g.as_array()-target.as_array(); W=np.eye(5) if W is None else np.asarray(W); return float(np.sqrt(d@W@d))
-def vertical_misalignment(system,jurisdiction_name=None,W_vert=None):
-    order={"community":1,"municipal":2,"regional":3,"provincial":3,"national":4,"supranational":5,"international":5}
-    js=sorted(system.jurisdictions,key=lambda j:order.get(j.level,99)); W=np.eye(5) if W_vert is None else W_vert
-    if len(js)<2:return 0.
-    vals=[]
-    for a,b in zip(js,js[1:]):
-        d=b.governance.as_array()-a.governance.as_array(); vals.append(np.sqrt(d@W@d))
-    return float(np.mean(vals))
+
+from gsm_governance.core.parameters import JUSTICE_DIMENSIONS
+from gsm_governance.core.system import MultiLevelGovernance
+
+
+def misalignment(governance: MultiLevelGovernance) -> float:
+    """
+    Aggregate vertical misalignment: mean L1 distance between each
+    jurisdiction's aggregate justice and its parent's.
+    """
+    juris = governance.jurisdictions
+    weights = governance.config.justice_weights
+    diffs = []
+    for j in juris.values():
+        if not j.parent or j.parent not in juris:
+            continue
+        p = juris[j.parent]
+        diffs.append(abs(
+            j.state.justice.aggregate(weights)
+            - p.state.justice.aggregate(weights)
+        ))
+    return float(np.mean(diffs)) if diffs else 0.0
+
+
+def justice_misalignment(
+    governance: MultiLevelGovernance,
+) -> dict[str, float]:
+    """Per-dimension vertical misalignment."""
+    juris = governance.jurisdictions
+    acc = {d: [] for d in JUSTICE_DIMENSIONS}
+    for j in juris.values():
+        if not j.parent or j.parent not in juris:
+            continue
+        p = juris[j.parent]
+        for d in JUSTICE_DIMENSIONS:
+            acc[d].append(abs(j.state.justice.d[d] - p.state.justice.d[d]))
+    return {d: float(np.mean(v)) if v else 0.0 for d, v in acc.items()}
