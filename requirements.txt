@@ -1,0 +1,6 @@
+# Runtime dependencies for gsm-governance.
+# The core library has no mandatory dependencies.
+#
+# For the estimation scaffold's downstream Bayesian work, add:
+#   numpy>=1.24
+#   scipy>=1.10

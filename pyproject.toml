@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gsm-governance"
+version = "0.4.0"
+description = "Reference implementation of the computational theory of justice-centered multi-level governance (GSM-J)"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{name = "Harris Wang", email = "harrisw@athabascau.ca"}]
+license = {text = "MIT"}
+keywords = ["governance", "justice", "multi-level", "computational social science"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "numpy>=1.24"]
+estimation = ["numpy>=1.24", "scipy>=1.10"]
+
+[tool.setuptools.packages.find]
+include = ["gsm_governance*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
