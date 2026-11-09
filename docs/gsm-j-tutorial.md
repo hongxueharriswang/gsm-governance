@@ -1,782 +1,733 @@
-# Just-Centred Governance: A Computational Tutorial
+# A Researcher's Tutorial for `gsm-governance`
 
-**From moral philosophy to working simulation with `gsm-governance` 0.3.0**
-
----
-
-## Preface
-
-This tutorial introduces **just-centred governance** as a computational research program and walks through the `gsm-governance` library that implements it. It is written for readers who are comfortable with Python and curious about political theory, but who may not yet be familiar with either formal governance modelling or the justice literature.
-
-By the end, you will be able to:
-
-- Explain why justice is best modelled as a governance capability rather than an external constraint
-- Build and run simulations of multi-level governance systems
-- Interpret results in terms of justice dimensions, constraints, and interventions
-- Apply the model to policy analysis, comparative governance, and research questions
-
-The tutorial proceeds in five parts. Part I motivates the problem. Part II explains the model. Part III shows how to use the library. Part IV presents five applications. Part V reflects on what the model can and cannot do.
+**Using the reference implementation of the computational theory of justice-centered multi-level governance in empirical and theoretical research**
 
 ---
 
-# Part I — Why just-centred governance needs a computational model
+## Who this tutorial is for
 
-## 1. The problem
+This tutorial assumes you are a researcher — in governance, computational social science, systems theory, public policy, or constitutional design — who wants to use `gsm-governance` as a **research instrument** rather than as a demonstration. It assumes:
 
-Imagine you are advising a national government on how to allocate a fixed budget for regional development. Three regions have different needs. One is wealthy and well-governed. One is poor but improving. One is poor and has just experienced a natural disaster. How should you allocate?
+- You have read the theory paper or its abstract (§1.4 for the irreducible core, §3.3.2 for the interaction decomposition, §3.6 for the four constraints, §6.3 for the empirical roadmap).
+- You are comfortable with Python and with the idea that every parameter in a conditional theory must be reported.
+- You have a research question — about policy design, parameter sensitivity, or the interaction of justice dimensions — that the library can help you answer.
 
-Standard policy analysis answers this with a cost-benefit calculation. The allocation that maximizes aggregate welfare wins. But this answer ignores at least four questions:
+What this tutorial does **not** do: teach the theory from scratch (read the paper), teach Python, or promise that the library is a complete empirical estimator (it is not — §11 explains what is scaffolding and what is not).
 
-1. **What is a fair distribution?** If the wealthy region produces more value per dollar, a purely aggregative approach will direct more funds there — even though the poorer regions need them more.
-2. **Who gets to decide?** If the wealthy region has more political voice, the process may itself be unjust even if the outcome happens to be fair.
-3. **What is owed to the region that was historically disadvantaged?** If the disaster region's poverty is a legacy of past extraction, current allocation formulas may compound the harm.
-4. **What is owed to future generations?** If the budget deficit is financed by borrowing, current allocations impose costs on people who have no voice in the decision.
-
-Each of these questions concerns **justice**, and each is distinct from aggregate welfare. A model that treats only welfare will systematically under-represent justice concerns.
-
-## 2. The multi-level dimension
-
-The problem is compounded by a second feature of modern governance: it is **multi-level**. Decisions are made simultaneously at household, community, municipal, provincial, national, regional, and global levels. Each level has partial authority and partial information. Each level's decisions reshape the constraint set of the others.
-
-Multi-level structure creates opportunities for **jurisdictional exploitation**. A national government can impose uncompensated costs on a province. A regional bloc can extract from a member state. A present generation can deplete the capability of a future one. These are not market failures; they are governance failures arising from asymmetric power, incomplete representation, and the absence of enforceable reciprocity across levels.
-
-Most formal governance models either ignore the multi-level structure, treat it as exogenous, or permit exploitation when aggregate welfare improves. The result is a class of models that can endorse arrangements that are efficient but unjust.
-
-## 3. The insight: justice is a capability, not just a constraint
-
-Conventional approaches to justice in governance modelling treat justice as an **external criterion**: simulate the system, compute outcomes, then evaluate whether those outcomes are just. This is the "justice as referee" model.
-
-A different approach treats justice as a **capability**: a state variable that co-evolves with the other properties of the system and that influences — and is influenced by — those properties.
-
-The distinction is subtle but consequential:
-
-| | Justice as constraint | Justice as capability |
-|---|---|---|
-| Nature | External evaluative criterion | Internal state variable |
-| Role | Judges outcomes | Shapes and is shaped by outcomes |
-| Dynamics | Static (given the state) | Dynamic (evolves over time) |
-| Feedback | None | Enables or constrains other capabilities |
-| Policy implication | Prescribe just outcomes | Build and maintain justice capability |
-
-The capability view is grounded in a simple observation: **just governance institutions produce better outcomes across the board**. Trust, voluntary compliance, information sharing, and long-horizon cooperation all depend on justice. A society with strong procedural justice is easier to govern than one without. A jurisdiction with legitimate recognition practices has more resilient social cohesion than one that marginalizes groups.
-
-Justice is not merely a moral ceiling on what governance may do. It is a **productive capability** that governance either possesses or lacks, and that can be developed, eroded, diffused, learned, and institutionalized.
+The tutorial is organized around **research workflows**, not around modules. Each section is a task you might want to perform, with a worked example you can adapt.
 
 ---
 
-# Part II — The model
-
-## 4. State representation
-
-The GSM-J model represents each jurisdiction at each governance level with a **state vector** containing six elements.
-
-### The five base capabilities
-
-| Symbol | Capability | What it means |
-|---|---|---|
-| $A$ | Accountability | Answerability of power-holders to affected parties |
-| $C$ | Institutional competence | Capacity to design and deliver policy |
-| $S$ | Social cohesion | Trust, shared norms, mutual identification |
-| $T$ | Strategic continuity | Consistency of long-horizon commitments |
-| $L$ | Adaptive learning | Capacity to update in response to feedback |
-
-These five capabilities are drawn from prior work in governance theory and complex adaptive systems.
-
-### The sixth capability: justice
-
-The justice capability $J$ is **multi-dimensional**. It has five facets:
-
-| Dimension | What it tracks |
-|---|---|
-| **Distributive** ($J^D$) | Fair allocation of resources, risks, and capabilities |
-| **Procedural** ($J^P$) | Fairness of decision-making processes |
-| **Recognition** ($J^R$) | Dignity, non-domination, participation as peers |
-| **Corrective** ($J^C$) | Remedy for historical and structural wrong |
-| **Intergenerational** ($J^I$) | Fairness to future generations |
-
-Each dimension is a scalar in $[0, 1]$. The full justice state of a jurisdiction is a five-vector.
-
-### Why five dimensions?
-
-The five dimensions are not arbitrary. Each corresponds to a distinct tradition in justice theory:
-
-- **Distributive** — Rawls, Sen, Nussbaum: how resources and capabilities are allocated
-- **Procedural** — Habermas, deliberative democracy: how decisions are made
-- **Recognition** — Fraser, Taylor, Honneth, Young: how groups are recognized and dignified
-- **Corrective** — Waldron, Thompson: how historical wrongs are remedied
-- **Intergenerational** — Parfit, Gardiner, Shue: how future generations are treated
-
-A governance system can score high on some dimensions and low on others. A jurisdiction with strong welfare provision but weak participation rights has high distributive justice and low procedural justice. A jurisdiction with formal equality but persistent cultural marginalization has high procedural justice and low recognition justice.
-
-## 5. Justice dimension interactions
-
-The five dimensions are not independent. Some pairs reinforce each other (**synergies**). Others trade off (**tensions**).
-
-### Synergies
-
-- **Procedural ↔ recognition**: voice enables dignity; dignity enables voice
-- **Distributive ↔ procedural**: material security enables participation; participation produces just allocation
-- **Corrective → recognition**: remedy restores dignity
-- **Recognition → corrective**: recognized groups can demand remedy
-
-### Tensions
-
-- **Intergenerational ↔ distributive**: future investment displaces present distribution
-- **Corrective → distributive**: reparations draw from present resources
-- **Procedural → intergenerational**: present participation crowds out future representation
-
-The model captures both via a **signed interaction matrix** $M_J$. Positive entries are synergies; negative entries are tensions.
-
-This matters empirically. A purely additive model would predict that justice improvements always reinforce each other. A signed matrix reveals that some justice-improving interventions produce offsetting effects in other dimensions.
-
-## 6. Constraints
-
-Four normative constraints bound the system's behaviour.
-
-### C1 — Bounded non-exploitation
-
-**No jurisdiction may impose uncompensated, non-trivial sacrifices on another for its own benefit.**
-
-Formally: $E_{ij} \le \tau_j$, or $\mathrm{Comp}_{ij} \ge E_{ij}$.
-
-Exploitation is permitted below the tolerance threshold $\tau_j$, and above it if adequately compensated. This is the minimal justice condition.
-
-### C2 — Justice floor
-
-**No jurisdiction may fall below a dimension-specific minimum.**
-
-Formally: $J_i^d \ge J_{\min}^d$ for each dimension $d$.
-
-The floors encode a **moral minimum**. Three traditions converge on such a minimum: sufficientarianism (everyone should have *enough*), capability thresholds (each capability has a threshold below which dignity is not possible), and human rights (minimum entitlements are non-derogable).
-
-### C3 — Vulnerability-sensitive non-exploitation
-
-**No exploitation of jurisdictions already below the aggregate floor.**
-
-Formally: if $J_j < J_{\min}^{\text{agg}}$, then $E_{ij} = 0$ for all $i$.
-
-This is the most distinctive constraint. It encodes a **prioritarian** commitment: the worse off a jurisdiction is, the stronger its protection against further extraction. It closes a gap in C1: a vulnerable jurisdiction with a low tolerance threshold $\tau_j$ could be exploited "legally" under C1 without C3.
-
-### C4 — Vertical justice alignment
-
-**Higher levels may not erode justice achieved at lower levels.**
-
-Formally: $J_i^{d, (l)} \ge \phi \cdot J_i^{d, (l-1)}$ for each dimension $d$, with $\phi$ the subsidiarity tolerance.
-
-C4 is a **non-regression principle**, not a uniformity principle. Local justice may exceed national justice — sanctuary cities, climate-leading municipalities, indigenous self-governance. What C4 forbids is the reverse: higher levels eroding lower-level justice.
-
-## 7. Dynamics
-
-Justice is not static. Each dimension evolves according to:
-
-$$
-\frac{dJ^d}{dt} = \underbrace{g_d(\mathbf{x})}_{\text{internal}} + \underbrace{h_d(E, \mathrm{Comp})}_{\text{exploitation}} + \underbrace{\mathcal{C}_J^d(J)}_{\text{coupling}} + \underbrace{\eta \sum_j A_{ij}(J_j^d - J_i^d)}_{\text{diffusion}} - \underbrace{\kappa_d J^d}_{\text{decay}}
-$$
-
-In words:
-
-- **Internal coupling**: justice dimensions are supported by base capabilities. Strong accountability and competence produce distributive justice; strong procedural capability produces procedural justice; and so on.
-- **Exploitation and compensation**: exploitation erodes justice; compensation restores it.
-- **Corrective restorative**: remedy builds restorative capability, not merely offsetting harm.
-- **Diffusion**: justice diffuses across neighbouring jurisdictions.
-- **Decay**: without support, justice erodes.
-
-The system is **path-dependent**. Two jurisdictions with identical initial conditions may converge on different equilibria depending on which dimensions were prioritized.
-
-## 8. Welfare
-
-The welfare function aggregates flourishing across jurisdictions with a **prioritarian** structure:
-
-$$
-W^* = W + \sum_d \gamma_d J^d - \sum_d \delta_d [J_{\min}^d - J^d]^+
-$$
-
-The three terms are:
-
-- **Base welfare** $W$: flourishing from base capabilities
-- **Justice contribution** $\sum_d \gamma_d J^d$: justice is constitutive of flourishing
-- **Prioritarian penalty** $-\sum_d \delta_d [J_{\min}^d - J^d]^+$: justice deficits reduce welfare disproportionately
-
-The default condition $\delta_d > \gamma_d$ encodes prioritarianism: fixing a deficit matters more than further improving the just.
-
-**This is a normative choice.** Users who reject prioritarianism can set $\delta_d = \gamma_d$; the model will produce different predictions.
-
-## 9. Interventions
-
-When a constraint is violated, the model schedules a **policy intervention**: a designated authority raises the affected state over a finite horizon, at a cost distributed across capabilities.
-
-Every intervention has four attributes:
-
-- **Designated authority** — who implements the correction
-- **Implementation cost** $\kappa^{\text{int}}$ per unit of correction
-- **Finite horizon** $\tau^{\text{int}}$ — steps to full implementation
-- **Multi-channel capability effects** — cost distributed across competence, cohesion, continuity, and accountability
-
-The multi-channel cost is a substantive modelling choice. It reflects the reality that constitutional reforms, redistributive legislation, and international agreements do not merely consume administrative capacity. They also affect cohesion (through short-term polarization), continuity (through policy volatility), and accountability (through override of local decision-making).
-
-The consequence is a **frequency ceiling**: aggressive justice-improvement programs are self-limiting, because they cumulatively degrade the capabilities required to implement them.
-
----
-
-# Part III — The library in practice
-
-## 10. Installation and first steps
-
-Install from source:
+## 1. Setup (5 minutes)
 
 ```bash
 git clone https://github.com/hongxueharriswang/gsm-governance.git
 cd gsm-governance
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
 pip install -e ".[dev]"
+pytest
 ```
 
-Verify:
-
-```python
-import gsm_governance as gsm
-print(gsm.__version__)  # "0.3.0"
-```
-
-Run the built-in demonstration:
+You should see thirteen tests pass. Then open the folder in VS Code:
 
 ```bash
-python -m gsm_governance
+code .
 ```
 
-## 11. A complete worked example
+The repository ships with `.vscode/launch.json` — you can hit F5 to run the example, or Ctrl+Shift+P → "Python: Configure Tests" to enable the built-in test runner.
 
-Let us model a three-level federal system with a national government, three provinces, and three municipalities. We'll give each jurisdiction a distinct justice profile and observe how justice evolves over time.
-
-### Step 1 — Configure the model
+**Verify the install.**
 
 ```python
-from gsm_governance import (
-    GSMConfig, MultiLevelGovernance, JusticeState,
-    Simulation, JusticeInteractionMatrix, MJRegime,
-)
-
-config = GSMConfig()
-M = JusticeInteractionMatrix(regime=MJRegime.SYMMETRIC)
+import gsm_governance
+print(gsm_governance.__version__)  # 0.4.0
 ```
 
-The configuration holds all parameters. Defaults are theoretically motivated but should be justified for each study.
-
-### Step 2 — Build the hierarchy
-
-```python
-gov = MultiLevelGovernance(config=config)
-
-# National level
-gov.add_jurisdiction(
-    "national", level=4,
-    capabilities={"A": 0.70, "C": 0.72, "S": 0.65, "T": 0.68, "L": 0.70},
-    justice=JusticeState({
-        "distributive": 0.55, "procedural": 0.60,
-        "recognition": 0.35, "corrective": 0.25,
-        "intergenerational": 0.50,
-    }),
-)
-
-# Provinces
-provinces = {
-    "province_wealthy": {
-        "caps": {"A": 0.75, "C": 0.78, "S": 0.70, "T": 0.72, "L": 0.70},
-        "justice": {"distributive": 0.70, "procedural": 0.68,
-                    "recognition": 0.55, "corrective": 0.30,
-                    "intergenerational": 0.55},
-    },
-    "province_poor": {
-        "caps": {"A": 0.55, "C": 0.50, "S": 0.60, "T": 0.55, "L": 0.50},
-        "justice": {"distributive": 0.30, "procedural": 0.35,
-                    "recognition": 0.25, "corrective": 0.10,
-                    "intergenerational": 0.30},
-    },
-    "province_disaster": {
-        "caps": {"A": 0.60, "C": 0.45, "S": 0.55, "T": 0.40, "L": 0.55},
-        "justice": {"distributive": 0.25, "procedural": 0.40,
-                    "recognition": 0.30, "corrective": 0.15,
-                    "intergenerational": 0.35},
-    },
-}
-for uid, data in provinces.items():
-    gov.add_jurisdiction(
-        uid, level=3,
-        capabilities=data["caps"],
-        justice=JusticeState(data["justice"]),
-    )
-    gov.link_vertical("national", uid)
-
-# Municipalities
-municipalities = {
-    "city_metro": {
-        "caps": {"A": 0.72, "C": 0.75, "S": 0.68, "T": 0.70, "L": 0.72},
-        "justice": {"distributive": 0.65, "procedural": 0.62,
-                    "recognition": 0.50, "corrective": 0.28,
-                    "intergenerational": 0.52},
-    },
-    "city_small": {
-        "caps": {"A": 0.58, "C": 0.52, "S": 0.62, "T": 0.50, "L": 0.52},
-        "justice": {"distributive": 0.35, "procedural": 0.40,
-                    "recognition": 0.30, "corrective": 0.12,
-                    "intergenerational": 0.32},
-    },
-    "city_coastal": {
-        "caps": {"A": 0.62, "C": 0.48, "S": 0.55, "T": 0.42, "L": 0.55},
-        "justice": {"distributive": 0.28, "procedural": 0.42,
-                    "recognition": 0.32, "corrective": 0.15,
-                    "intergenerational": 0.38},
-    },
-}
-for uid, data in municipalities.items():
-    gov.add_jurisdiction(
-        uid, level=2,
-        capabilities=data["caps"],
-        justice=JusticeState(data["justice"]),
-    )
-
-gov.link_vertical("province_wealthy", "city_metro")
-gov.link_vertical("province_poor", "city_small")
-gov.link_vertical("province_disaster", "city_coastal")
-gov.link_horizontal("province_wealthy", "province_poor")
-gov.link_horizontal("province_poor", "province_disaster")
-gov.link_horizontal("city_metro", "city_small")
-```
-
-### Step 3 — Inject exploitation
-
-Suppose the wealthy province extracts from the poor one via a regressive tax-sharing formula, without adequate compensation:
-
-```python
-sim = Simulation(gov, config=config, M_J=M)
-
-sim.set_exploitation("province_wealthy", "province_poor", {
-    "distributive": 0.20,
-    "procedural": 0.10,
-    "recognition": 0.05,
-    "corrective": 0.00,
-    "intergenerational": 0.08,
-})
-
-sim.set_compensation("province_wealthy", "province_poor", {
-    "distributive": 0.05,
-    "procedural": 0.02,
-    "recognition": 0.00,
-    "corrective": 0.00,
-    "intergenerational": 0.02,
-})
-```
-
-### Step 4 — Run the simulation
-
-```python
-history = sim.run(steps=500)
-```
-
-### Step 5 — Read the results
-
-```python
-import pandas as pd
-
-df = pd.DataFrame(history)
-print(df[["t", "W_star", "mean_justice",
-          "C2_violations", "C3_violations", "C4_violations",
-          "active_interventions"]].tail(10))
-```
-
-The output shows:
-
-- `W_star`: welfare including justice
-- `mean_justice`: aggregate justice level
-- `C2_violations`: count of floor violations
-- `C3_violations`: count of vulnerability-sensitive violations
-- `C4_violations`: count of vertical alignment violations
-- `active_interventions`: how many policy interventions are currently active
-
-### Step 6 — Per-jurisdiction profile
-
-```python
-for uid, j in gov.jurisdictions.items():
-    print(f"\n{uid}:")
-    for d in gsm.JUSTICE_DIMENSIONS:
-        val = j.state.justice.d[d]
-        floor = config.justice_floors[d]
-        marker = " <-- below floor" if val < floor else ""
-        print(f"  {d:20s}: {val:.3f}{marker}")
-```
-
-You will see which jurisdictions have improved, which remain below floor, and how interventions have redistributed justice across the hierarchy.
+If you see anything other than `0.4.0`, you are working against a stale copy. The library is versioned to the paper: 0.4.0 implements v5 of the theory, 0.3.0 implements v3.
 
 ---
 
-# Part IV — Applications
+## 2. Orientation: the theory in code
 
-## Application 1: Policy analysis — designing intervention schedules
+Five objects correspond to the paper's core constructs. You will use all five in every study.
 
-**Question.** A national government wants to raise recognition justice in its three most marginalized municipalities. What intervention schedule should it adopt?
+| Object | What it is | Paper section |
+|---|---|---|
+| `GSMConfig` | Every normative parameter as an explicit field | §7.2 |
+| `Jurisdiction` + `State` | A jurisdiction at a level, with `capabilities` and `justice` | §3.1–3.3 |
+| `JusticeInteractionMatrix` | `M_J = M_J⁺ + M_J⁻` with pair typing | §3.3.2 |
+| `Simulation` | The dynamic engine: state → dynamics → constraints → welfare | §4 |
+| `WelfareEvaluator` | Dimension-specific prioritarian welfare | §4.3 |
 
-**Approach.** Simulate two schedules: aggressive (short horizon, high frequency) and patient (long horizon, low frequency). Compare outcomes.
+The library enforces one constraint on how you use it. **Every normative commitment must be visible in `GSMConfig`.** There are no hidden defaults that shape the result. If a parameter is not in `GSMConfig`, it does not affect the simulation. This is what makes the output publishable.
 
-```python
-def run_schedule(horizon, cost, weights):
-    config = GSMConfig(
-        intervention_horizon=horizon,
-        intervention_cost=cost,
-        intervention_weights=weights,
-    )
-    gov = build_test_hierarchy(config)
-    sim = Simulation(gov, config=config)
-    return sim.run(steps=500)
-
-# Aggressive schedule
-aggressive = run_schedule(
-    horizon=2,
-    cost=0.10,
-    weights={"C": 0.25, "S": 0.25, "T": 0.25, "A": 0.25},
-)
-
-# Patient schedule
-patient = run_schedule(
-    horizon=15,
-    cost=0.05,
-    weights={"C": 0.60, "S": 0.15, "T": 0.15, "A": 0.10},
-)
-
-# Compare recognition justice trajectory
-import matplotlib.pyplot as plt
-plt.plot([r["t"] for r in aggressive],
-         [r["dim_means"]["recognition"] for r in aggressive],
-         label="Aggressive")
-plt.plot([r["t"] for r in patient],
-         [r["dim_means"]["recognition"] for r in patient],
-         label="Patient")
-plt.xlabel("Time")
-plt.ylabel("Mean recognition justice")
-plt.legend()
-```
-
-**What you will likely find.** The aggressive schedule raises recognition justice faster in the short run but depletes cohesion and continuity, capping long-run improvement. The patient schedule is slower but reaches a higher steady state. This is the **frequency ceiling** in action.
-
-**Policy implication.** Justice reform is not a matter of doing as much as possible as fast as possible. It is a matter of **pacing interventions** to preserve the capabilities required to implement them. The model quantifies the trade-off.
+The three innovations the paper calls irreducible — the justice gap, the five-dimensional capability, the constraint architecture — are not "features" of the library. They are the reason the library exists. Everything else is machinery to make them precise.
 
 ---
 
-## Application 2: Comparative governance — benchmarking jurisdictions
+## 3. Your first simulation
 
-**Question.** How does Denmark compare to Sweden and Norway on justice capability, and what explains the differences?
+```python
+from gsm_governance import GSMConfig, Simulation, load_stylized_nordic
 
-**Approach.** Construct the three countries as single-level jurisdictions with empirically motivated justice profiles, then simulate their trajectories under identical conditions.
+config = GSMConfig(seed=42)
+jurisdictions = load_stylized_nordic()
+sim = Simulation(config, jurisdictions)
+history = sim.run(n_steps=20)
+
+final = history[-1]
+print(f"welfare       = {final['welfare']['total']:.4f}")
+print(f"C2 violations = {len(final['violations']['c2'])}")
+print(f"C4 violations = {len(final['violations']['c4'])}")
+```
+
+Output:
+
+```
+welfare       = 3.7521
+C2 violations = 9
+C4 violations = 12
+```
+
+Two things to notice.
+
+**First, aggregate welfare improves while floors are violated.** This is the paper's §6.1 finding, reproduced. Under default parameters with the stylized-Nordic profiles, the aggregate rises because capabilities drift upward while recognition, corrective, and intergenerational dimensions remain below their floors. You can see the same thing by looking at `final['violations']['c2']` — nine shortfalls across the three jurisdictions.
+
+**Second, C4 violations are systematic.** Twelve shortfalls — one per dimension per parent-child pair, at two levels. The province falls below the national level in every dimension by more than `phi_d`, and the municipality below the province. C4 is doing what C4 is supposed to do: it exposes alignment failures that C1 (non-exploitation) does not catch.
+
+Now look at the same data as a time series:
+
+```python
+print(f"{'t':>3} {'welfare':>10} {'base':>10} {'expl':>8} "
+      f"{'C1':>3} {'C2':>3} {'C3':>3} {'C4':>3}")
+for row in history:
+    v = row["violations"]
+    print(f"{row['t']:>3} {row['welfare']['total']:>10.4f} "
+          f"{row['welfare']['base']:>10.4f} "
+          f"{row['welfare']['exploitation_penalty']:>8.4f} "
+          f"{len(v['c1']):>3} {len(v['c2']):>3} "
+          f"{len(v['c3']):>3} {len(v['c4']):>3}")
+```
+
+You will see welfare plateauing, C2 violations persisting, C1 occasionally firing (the illustrative exploitation model in `Simulation._exploitation` fires when a parent gains justice at a child's expense), and C3 reporting vulnerable jurisdiction ids. That's your baseline. Everything else in this tutorial is a controlled departure from it.
+
+---
+
+## 4. The researcher's layer
+
+The library is deliberately low-level. It does not impose a study structure. Your first task in any research project is to write a **thin wrapper** that:
+
+1. Holds your `GSMConfig`, jurisdictions, and interaction matrix.
+2. Records every run — config, seed, history — so results are reproducible.
+3. Provides a small set of diagnostics tailored to your research question.
+
+Here is a minimal starting point. Adapt it.
+
+```python
+# my_study/wrapper.py
+import json
+from dataclasses import asdict
+from pathlib import Path
+from gsm_governance import GSMConfig, Simulation, load_stylized_nordic
+
+class Study:
+    """A reproducible wrapper around a single GSM-J study."""
+
+    def __init__(self, name: str, config: GSMConfig, jurisdictions=None):
+        self.name = name
+        self.config = config
+        self.jurisdictions = jurisdictions or load_stylized_nordic()
+        self.runs = []
+
+    def run(self, n_steps: int, label: str = "") -> dict:
+        sim = Simulation(self.config, self.jurisdictions)
+        history = sim.run(n_steps)
+        record = {
+            "label": label,
+            "n_steps": n_steps,
+            "history": history,
+            "final_justice": {
+                j.id: dict(j.state.justice) for j in self.jurisdictions
+            },
+            "final_capabilities": {
+                j.id: dict(j.state.capabilities) for j in self.jurisdictions
+            },
+        }
+        self.runs.append(record)
+        return record
+
+    def save(self, path: str):
+        payload = {
+            "study_name": self.name,
+            "library_version": __import__("gsm_governance").__version__,
+            "config": asdict(self.config),
+            "runs": self.runs,
+        }
+        Path(path).write_text(json.dumps(payload, indent=2, default=float))
+```
+
+Now the four things a reviewer will ask for — config, seeds, history, final state — are recorded by construction. Do not skip this step. Reproducibility is the difference between a study and a demo.
+
+Two specific practices matter.
+
+**Always set a seed.** The illustrative exploitation model in `Simulation._exploitation` does not use randomness, but the estimation scaffold and any custom model you add will. Set the seed in `GSMConfig`.
+
+**Always report the library version.** The paper's v5 and v3 are not interchangeable: C3 and C4 changed behaviour, and welfare changed form. A result from 0.3.0 is not the same result from 0.4.0. Record `gsm_governance.__version__` in every saved study.
+
+---
+
+## 5. Research workflow: constraint diagnostics
+
+Most studies begin with a diagnostic pass — where does the system fail, in which dimension, at which level? The library's four constraint functions are designed to answer this.
 
 ```python
 from gsm_governance import (
-    GSMConfig, MultiLevelGovernance, JusticeState, Simulation,
-    justice_index, justice_floor_violations, welfare_dimension_specific,
+    GSMConfig, Simulation, load_stylized_nordic,
+    check_c1, check_c2, check_c3, check_c4,
 )
 
-countries = {
-    "Denmark": {
-        "distributive": 0.82, "procedural": 0.80,
-        "recognition": 0.65, "corrective": 0.40,
-        "intergenerational": 0.65,
-    },
-    "Sweden": {
-        "distributive": 0.80, "procedural": 0.78,
-        "recognition": 0.68, "corrective": 0.42,
-        "intergenerational": 0.68,
-    },
-    "Norway": {
-        "distributive": 0.85, "procedural": 0.76,
-        "recognition": 0.62, "corrective": 0.38,
-        "intergenerational": 0.75,
-    },
+config = GSMConfig(seed=42)
+juris = load_stylized_nordic()
+sim = Simulation(config, juris)
+sim.run(20)
+
+exploitation = sim._exploitation(
+    {j.id: dict(j.state.justice) for j in juris},
+    {j.id: dict(j.state.capabilities) for j in juris},
+)
+compensation = {}  # no compensation in this baseline
+
+print("C1 (non-exploitation violations):")
+for pair in check_c1(juris, exploitation, compensation, config):
+    print(f"  {pair[0]} → {pair[1]}: E={exploitation[pair]:.4f}")
+
+print("\nC2 (floor shortfalls, by dimension):")
+c2 = check_c2(juris, config)
+from collections import Counter
+by_dim = Counter(d for (_, d, _) in c2)
+for d, n in by_dim.most_common():
+    print(f"  {d:>18}: {n} shortfalls")
+
+print("\nC3 (vulnerable jurisdictions):")
+for jid in check_c3(juris, config):
+    from gsm_governance.constraints import effective_tau
+    j = next(x for x in juris if x.id == jid)
+    print(f"  {jid}: τ={j.tau:.3f} → τ_vuln={effective_tau(j, config):.3f}")
+
+print("\nC4 (vertical alignment shortfalls, by dimension):")
+c4 = check_c4(juris, config)
+by_dim4 = Counter(d for (_, d, _) in c4)
+for d, n in by_dim4.most_common():
+    print(f"  {d:>18}: {n} shortfalls")
+```
+
+This diagnostic is the standard first table in any paper using GSM-J. Report it in your methods section. The *pattern* of violations — which dimension, which level — is often the substantive finding, not just the setup.
+
+---
+
+## 6. Research workflow: policy intervention experiments
+
+The paper's §4.1 models intervention as a costly, multi-channel operation. The `PolicyInterventionEnforcer` implements this: an intervention targets a jurisdiction, a channel, and a magnitude, and has effects that unfold over `tau_int` periods before recovery begins.
+
+The natural study design is **baseline vs. treated**, with the same seed and the same initial state, differing only in whether the intervention fires.
+
+```python
+from gsm_governance import GSMConfig, Simulation, Intervention, load_stylized_nordic
+
+def run_with_intervention(channel: str, magnitude: float, target: str,
+                          start_t: int = 5, n_steps: int = 30) -> list:
+    juris = load_stylized_nordic()
+    sim = Simulation(GSMConfig(seed=42), juris)
+    if magnitude > 0:
+        sim.enforcer.add(Intervention(
+            jurisdiction_id=target,
+            start_t=start_t,
+            channel=channel,
+            magnitude=magnitude,
+            authority="national",
+        ))
+    return sim.run(n_steps)
+
+baseline = run_with_intervention("fiscal", 0.0, "province")
+treated  = run_with_intervention("fiscal", 0.30, "province")
+
+print(f"{'t':>3} {'baseline':>10} {'treated':>10} {'Δ':>8}")
+for t in [0, 10, 20, 29]:
+    b = baseline[t]["welfare"]["total"]
+    x = treated[t]["welfare"]["total"]
+    print(f"{t:>3} {b:>10.4f} {x:>10.4f} {x - b:>+8.4f}")
+```
+
+The interesting comparison is not the end-state gap; it's the **shape** of the gap. A fiscal intervention on the province should raise distributive justice in the province while also depleting cohesion and continuity through the multi-channel cost (`kappa_int`). The depletion will show up as a drag on later welfare, and possibly as a C4 violation when the province's other dimensions fall below the national level. This is the paper's §4.1 claim — that intervention has *costs* — made operational.
+
+A more comparative design holds the target fixed and varies the channel:
+
+```python
+channels = ["fiscal", "infrastructural", "representational",
+            "regulatory", "future", "restitutional"]
+
+print(f"{'channel':>18} {'welfare_end':>12} {'C2_end':>8} {'C4_end':>8} "
+      f"{'cohesion_end':>14}")
+for ch in channels:
+    juris = load_stylized_nordic()
+    sim = Simulation(GSMConfig(seed=42), juris)
+    sim.enforcer.add(Intervention(
+        jurisdiction_id="province", start_t=5, channel=ch, magnitude=0.30,
+    ))
+    history = sim.run(30)
+    final = history[-1]
+    print(f"{ch:>18} {final['welfare']['total']:>12.4f} "
+          f"{len(final['violations']['c2']):>8} "
+          f"{len(final['violations']['c4']):>8} "
+          f"{juris[1].state.capabilities['cohesion']:>14.3f}")
+```
+
+Each channel affects a different dimension mix (`enforcement.py` documents the mapping). A representational intervention targets procedural and recognition justice; a future-oriented transfer targets intergenerational. The output table tells you which channel produces the largest welfare gain at the cost of which capability depletion — a substantive finding in its own right, and one that varies with `omega_k` (the channel weights), which you should report alongside the results.
+
+---
+
+## 7. Research workflow: sensitivity analysis
+
+Conditional normative status (§1.7) is not a rhetorical hedge. It has an empirical consequence: **your result is conditional on your parameterization, and a well-conducted study demonstrates the conditioning.** Sensitivity analysis is not optional.
+
+The cleanest pattern is a parameter grid. `dataclasses.replace` on `GSMConfig` triggers validation, so invalid points fail loudly.
+
+```python
+import itertools
+from dataclasses import replace
+from gsm_governance import GSMConfig, Simulation, load_stylized_nordic
+
+baseline = GSMConfig(seed=42)
+
+grid = {
+    "phi_vuln": [0.0, 0.25, 0.50, 0.75, 1.0],
+    "welfare_mode": ["quadratic", "linear_floor"],
 }
 
-config = GSMConfig()
-results = {}
+results = []
+for phi_vuln, mode in itertools.product(grid["phi_vuln"], grid["welfare_mode"]):
+    config = replace(baseline, phi_vuln=phi_vuln, welfare_mode=mode)
+    juris = load_stylized_nordic()
+    sim = Simulation(config, juris)
+    history = sim.run(50)
+    final = history[-1]
+    results.append({
+        "phi_vuln": phi_vuln,
+        "welfare_mode": mode,
+        "final_welfare": final["welfare"]["total"],
+        "c1_violations": len(final["violations"]["c1"]),
+        "c2_violations": len(final["violations"]["c2"]),
+        "c4_violations": len(final["violations"]["c4"]),
+    })
 
-for name, profile in countries.items():
-    gov = MultiLevelGovernance(config=config)
-    gov.add_jurisdiction(name, level=4, justice=JusticeState(profile))
-    sim = Simulation(gov, config=config)
-    hist = sim.run(steps=300)
-    results[name] = {
-        "final_welfare": hist[-1]["W_star"],
-        "justice_index": justice_index(gov),
-        "violations": justice_floor_violations(gov),
+print(f"{'phi_vuln':>9} {'mode':>14} {'welfare':>10} {'C1':>3} {'C2':>3} {'C4':>3}")
+for r in results:
+    print(f"{r['phi_vuln']:>9.2f} {r['welfare_mode']:>14} "
+          f"{r['final_welfare']:>10.4f} "
+          f"{r['c1_violations']:>3} {r['c2_violations']:>3} "
+          f"{r['c4_violations']:>3}")
+```
+
+A parameter grid is the minimal version. Two extensions matter for publication:
+
+**Multi-dimensional grids.** Vary `phi_vuln`, `phi_d`, `welfare_mode`, and `m_max` together. Report the full grid, not just the extremes. Reviewers will ask what happens at intermediate values.
+
+**Seed replication.** Run each point at multiple seeds and report the mean and variance of the outcome. The illustrative exploitation model is deterministic, but any custom model you write (see §8) may be stochastic. Report seed-to-seed variability even if it is zero — that is itself a finding.
+
+A full sensitivity study looks like this:
+
+```python
+grid = {
+    "phi_vuln": [0.0, 0.5, 1.0],
+    "phi_d": [{d: 0.02 for d in ("distributive","procedural","recognition",
+                                 "corrective","intergenerational")},
+              {d: 0.10 for d in ("distributive","procedural","recognition",
+                                 "corrective","intergenerational")}],
+    "welfare_mode": ["quadratic", "linear_floor"],
+}
+seeds = [42, 43, 44, 45, 46]
+
+# ... run each combination at each seed, aggregate, report
+```
+
+The reporting standard: a table with parameter values as columns, outcome statistics as rows, and seed variance where relevant. The paper's Appendix B is a checklist of what must be reported. Follow it.
+
+---
+
+## 8. Working with your own data and exploitation model
+
+The library ships with two kinds of scaffolding that you will almost certainly replace:
+
+1. `load_stylized_nordic()` returns **illustrative profiles**, not measurements of any country. If you have real data, use it.
+2. `Simulation._exploitation` uses an **illustrative** parent-exploits-child model. If your research question involves a specific mechanism, override it.
+
+### Supplying your own jurisdictions
+
+```python
+from gsm_governance import Jurisdiction, State, DIMENSIONS, CAPABILITIES
+
+def my_jurisdictions():
+    """Replace with your own indicator data."""
+    national = Jurisdiction(
+        id="my_national",
+        level=1,
+        state=State(
+            capabilities={c: 0.82 for c in CAPABILITIES},  # from V-Dem, WJP, etc.
+            justice={
+                "distributive":     0.74,
+                "procedural":       0.79,
+                "recognition":      0.61,
+                "corrective":       0.42,
+                "intergenerational":0.51,
+            },
+        ),
+        tau=0.05,
+    )
+    province = Jurisdiction(
+        id="my_province",
+        level=2,
+        state=State(
+            capabilities={c: 0.70 for c in CAPABILITIES},
+            justice={
+                "distributive":     0.68,
+                "procedural":       0.72,
+                "recognition":      0.55,
+                "corrective":       0.38,
+                "intergenerational":0.47,
+            },
+        ),
+        tau=0.05,
+    )
+    national.add_child(province)
+    return [national, province]
+```
+
+Two rules for using your own data. **Report the sources for each dimension**, following §6.3's guidance. Distributive is best served (OECD *How's Life?*, SDG); procedural and recognition by WJP and V-Dem; corrective has no dedicated cross-national index and will require construction; intergenerational by natural-capital and fiscal-sustainability indicators; attitudes by WVS. **Report interpretive judgments** when your source does not measure the dimension directly. The library's `State` is a scalar per dimension; mapping your indicators to it is a calibration choice, and it belongs in your methods.
+
+### Overriding the exploitation model
+
+The default `_exploitation` uses an illustrative "parent gains at child's expense" mechanism. For a paper that models a specific externality — environmental, fiscal, regulatory — subclass `Simulation`.
+
+```python
+from gsm_governance import Simulation, DIMENSIONS
+
+class EnvironmentalExternality(Simulation):
+    """Model an environmental externality as intergenerational exploitation.
+
+    A parent jurisdiction whose intergenerational justice improves at a rate
+    above the fair-share benchmark imposes a loss on its children in the
+    intergenerational dimension.
+    """
+
+    FAIR_SHARE_RATE = 0.02   # benchmark improvement per period
+    EXTERNALITY_COEF = 0.8   # fraction of excess transferred as exploitation
+
+    def _exploitation(self, prev_justice, prev_cap):
+        out = {}
+        for j in self.jurisdictions:
+            if j.parent is None:
+                continue
+            p = j.parent
+            parent_rate = (p.state.justice["intergenerational"]
+                           - prev_justice[p.id]["intergenerational"])
+            excess = max(0.0, parent_rate - self.FAIR_SHARE_RATE)
+            if excess > 0:
+                out[(p.id, j.id)] = self.EXTERNALITY_COEF * excess
+        return out
+```
+
+Use it exactly like `Simulation`:
+
+```python
+sim = EnvironmentalExternality(GSMConfig(seed=42), my_jurisdictions())
+history = sim.run(30)
+```
+
+The subclass is where your **theoretical contribution** lives. The library's job is to give you a well-defined state space, constraint system, and welfare function so that your mechanism is comparable to others.
+
+### Modeling compensation regimes
+
+`Simulation` passes an empty compensation dict to `check_all` at every step. To model a compensation regime, override `step` and inject it:
+
+```python
+class CompensatingSimulation(Simulation):
+    """Simulation with a fixed compensation regime applied at each step."""
+
+    def __init__(self, config, jurisdictions, compensation_by_pair):
+        super().__init__(config, jurisdictions)
+        self.compensation_by_pair = compensation_by_pair
+        self.compensation_history = []
+
+    def step(self):
+        prev_J = {j.id: dict(j.state.justice) for j in self.jurisdictions}
+        prev_C = {j.id: dict(j.state.capabilities) for j in self.jurisdictions}
+        exploitation = self._exploitation(prev_J, prev_C)
+
+        # Build compensation for the pairs that exploited this step
+        compensation = {
+            pair: self.compensation_by_pair(pair, e)
+            for pair, e in exploitation.items()
+            if self.compensation_by_pair(pair, e) is not None
+        }
+        self.compensation_history.append(compensation)
+
+        # Parent step recomputes exploitation — override the check to use ours
+        row = super().step()
+        # Re-run constraint checks with our compensation
+        from gsm_governance import check_all
+        row["violations"] = check_all(
+            self.jurisdictions, exploitation, compensation, self.config)
+        return row
+```
+
+Then supply a compensation provider:
+
+```python
+from gsm_governance import CompensationVector
+
+def full_fiscal_compensation(pair, exploitation):
+    return CompensationVector(fiscal=exploitation)
+
+sim = CompensatingSimulation(
+    GSMConfig(seed=42),
+    load_stylized_nordic(),
+    full_fiscal_compensation,
+)
+history = sim.run(30)
+```
+
+Compare against a no-compensation baseline to test the paper's hypothesis that compensation converts violations into admissible arrangements. The difference between the two runs is your effect size.
+
+---
+
+## 9. Known issues and patches
+
+Two things in the delivered library need a correction before you use them in research. Both are documented here rather than hidden.
+
+### Issue 1: C1 does not apply the vulnerability adjustment
+
+**The bug.** `check_c1` uses `jurisdiction.tau` directly, not `effective_tau(jurisdiction, config)`. Per §3.6.3 of the paper, C1 must use the vulnerability-reduced threshold. As delivered, the library does not do this.
+
+**The fix.** Override the check in your study layer:
+
+```python
+from gsm_governance.constraints import effective_tau
+
+def check_c1_corrected(jurisdictions, exploitation, compensation, config):
+    """C1 with the §3.6.3 vulnerability adjustment applied."""
+    by_id = {j.id: j for j in jurisdictions}
+    violations = []
+    for (i, j), e in exploitation.items():
+        if e <= 0.0:
+            continue
+        tau_eff = effective_tau(by_id[j], config) if j in by_id else config.default_tau
+        if e <= tau_eff + config.epsilon:
+            continue
+        comp = compensation.get((i, j))
+        if comp is None or not comp.is_adequate(e, config):
+            violations.append((i, j))
+    return violations
+```
+
+Use `check_c1_corrected` in place of `check_c1` throughout your study. Report the substitution in your methods. The paper's claim about vulnerability-sensitive non-exploitation is not testable without it.
+
+### Issue 2: the estimation scaffold does not estimate
+
+**The gap.** `estimate_MJ` raises `NotImplementedError`. This is deliberate: §3.3.3 and Appendix D.7 of the paper state that component identification requires natural experiments or cross-context designs that a library cannot manufacture.
+
+**What you can do.** `EstimationSpec` supplies the sign priors and component mask your own Bayesian implementation needs. If your research involves estimating `M_J` from data, you will:
+
+1. Construct an `EstimationSpec` with your priors.
+2. Write or supply an observation model (`EstimationSpec` does not assume one).
+3. Implement inference against `JusticeInteractionMatrix`'s data structures.
+
+The estimation module is a **coordination point**, not a solver. Do not expect it to estimate; expect it to keep your priors and mask comparable across studies.
+
+### Issue 3: `Simulation` uses an illustrative exploitation model
+
+**The caveat.** If your research question concerns exploitation, override `_exploitation` (§8). The default is illustrative; do not publish results from it without stating that it is not a calibration.
+
+### Issue 4: `data` returns illustrative profiles
+
+`load_stylized_nordic()` returns profiles from §6 that are pedagogical. If your paper uses real data, supply your own (§8). The library will not check whether you did.
+
+---
+
+## 10. Reporting for publication
+
+The paper's Appendix B lists what must be reported. The library makes it possible to record all of it. A study record should include:
+
+**Config.** Serialize with `dataclasses.asdict`. Include every field, even the ones you set to defaults — reviewers will want to see the defaults.
+
+```python
+import json
+from dataclasses import asdict
+
+def record_config(config, path):
+    with open(path, "w") as f:
+        json.dump(asdict(config), f, indent=2)
+```
+
+**Seeds.** Record the seed used for each run. If you ran a grid at multiple seeds, record the mapping from grid point to seed.
+
+**History.** `sim.history` is a list of dicts, one per step. Serialize it.
+
+```python
+def record_run(sim, path):
+    payload = {
+        "library_version": __import__("gsm_governance").__version__,
+        "config_seed": sim.config.seed,
+        "history": sim.history,
+        "final_justice": {j.id: dict(j.state.justice) for j in sim.jurisdictions},
+        "final_capabilities": {j.id: dict(j.state.capabilities) for j in sim.jurisdictions},
     }
-
-import pandas as pd
-df = pd.DataFrame(results).T
-print(df)
+    with open(path, "w") as f:
+        json.dump(payload, f, indent=2, default=float)
 ```
 
-**What you will find.** Norway's intergenerational score drives a higher long-run welfare trajectory despite weaker procedural justice. Sweden's recognition profile produces a higher justice index. Denmark sits between on most dimensions.
-
-**Interpretive note.** The absolute values matter less than the **profile shape**. Two countries with the same mean justice may have very different trajectories because their weakest dimension constrains the others via the coupling matrix.
-
----
-
-## Application 3: Constitutional design — choosing floors and weights
-
-**Question.** A constitutional convention is debating the appropriate justice floor for a new federal system. What floors produce the most robust outcomes across a range of conditions?
-
-**Approach.** Sweep the floor vector over a plausible range and evaluate long-run welfare under shocks.
+**Effective thresholds.** If you report C1 violations, report the effective threshold per jurisdiction, not the raw `tau`:
 
 ```python
-import numpy as np
-from itertools import product
-from gsm_governance import (
-    GSMConfig, MultiLevelGovernance, JusticeState, Simulation,
-)
-
-def simulate_with_floors(floors, shock_time=150, shock_size=0.25):
-    config = GSMConfig(justice_floors=floors)
-    gov = MultiLevelGovernance(config=config)
-    gov.add_jurisdiction("national", level=4)
-    gov.add_jurisdiction(
-        "region", level=3,
-        justice=JusticeState({"distributive": 0.50, "procedural": 0.50,
-                              "recognition": 0.40, "corrective": 0.30,
-                              "intergenerational": 0.50}),
-    )
-    gov.link_vertical("national", "region")
-
-    sim = Simulation(gov, config=config)
-
-    # Apply shock at t=shock_time
-    class ShockSim(Simulation):
-        def step(self):
-            super().step()
-            if abs(self.t - shock_time) < config.dt / 2:
-                for j in self.governance.jurisdictions.values():
-                    j.state.justice.d["distributive"] -= shock_size
-
-    sim.__class__ = ShockSim
-    hist = sim.run(steps=300)
-    return hist[-1]["W_star"]
-
-# Sweep floors
-floor_values = [0.10, 0.20, 0.30, 0.40]
-results = {}
-for f in floor_values:
-    floors = {d: f for d in gsm.JUSTICE_DIMENSIONS}
-    try:
-        results[f] = simulate_with_floors(floors)
-    except ValueError:
-        results[f] = None
-
-print(pd.DataFrame(results, index=["Final W*"]).T)
+from gsm_governance.constraints import effective_tau
+thresholds = {j.id: effective_tau(j, config) for j in sim.jurisdictions}
 ```
 
-**What you will find.** Very low floors provide little protection. Very high floors trigger frequent interventions that deplete capabilities. An **intermediate floor** (roughly 0.25–0.35) balances protection against intervention cost. This is the model's answer to "how much justice is optimal?" — a question no purely philosophical analysis can answer.
+**Any overrides.** If you used `check_c1_corrected`, report that. If you subclassed `Simulation`, report the mechanism in the paper's methods section.
 
-**Interpretive note.** The optimum depends on the intervention cost and the shock severity. Under low-cost, high-shock scenarios, higher floors win. Under high-cost scenarios, lower floors win. Constitutional design must therefore consider both values and implementation capacity.
+**Sensitivity results.** The full grid, not just the extremes. If a grid point produced non-monotonic results, say so.
+
+**Version.** The library version. `0.3.0` and `0.4.0` produce different results from the same config because C3 and C4 changed behaviour. A reviewer reproducing your study needs the version.
 
 ---
 
-## Application 4: Historical injustice — modelling corrective dynamics
+## 11. Extending the library
 
-**Question.** How long does it take to repair historical injustice under different compensation strategies?
+Most research projects will need one of three extensions.
 
-**Approach.** Model a jurisdiction that has suffered generations of distributive injustice. Compare three compensation regimes: minimal (10% of historical harm), moderate (50%), and full (100%).
+### A new constraint
+
+If your research question involves a constraint the paper does not specify — say, a procedural-justice floor that scales with vulnerability — add it as a function in your study layer, not in the library. The library's contract is to implement the paper's constraints faithfully; your extensions belong in your paper's methods.
+
+### A new capability coupling
+
+`capability_step` implements a first-order drift toward mean justice, modulated by intervention deltas. If your research question requires a substantive coupling (e.g., competence → distributive justice with a lag), override `capability_step` in a subclass:
 
 ```python
-from gsm_governance import (
-    GSMConfig, MultiLevelGovernance, JusticeState,
-    Simulation, CompensationMechanism,
-)
+from gsm_governance import Simulation
+from gsm_governance.dynamics import capability_step
 
-def run_correction(compensation_fraction, years=200):
-    config = GSMConfig()
-    gov = MultiLevelGovernance(config=config)
-
-    gov.add_jurisdiction(
-        "perpetrator", level=4,
-        capabilities={"A": 0.80, "C": 0.80, "S": 0.75, "T": 0.80, "L": 0.80},
-        justice={d: 0.70 for d in gsm.JUSTICE_DIMENSIONS},
-    )
-    gov.add_jurisdiction(
-        "descendant", level=4,
-        capabilities={"A": 0.50, "C": 0.45, "S": 0.55, "T": 0.40, "L": 0.45},
-        justice={d: 0.20 for d in gsm.JUSTICE_DIMENSIONS},
-    )
-
-    sim = Simulation(gov, config=config)
-
-    # Historical harm expressed as an existing corrective deficit
-    sim.set_exploitation("perpetrator", "descendant", {
-        "corrective": 0.60,  # historical harm
-        "distributive": 0.30,
-    })
-    sim.set_compensation("perpetrator", "descendant", {
-        "corrective": 0.60 * compensation_fraction,
-        "distributive": 0.30 * compensation_fraction,
-    })
-
-    hist = sim.run(steps=years)
-    return hist
-
-# Compare
-for frac in [0.1, 0.5, 1.0]:
-    hist = run_correction(frac)
-    final = hist[-1]["mean_justice"]
-    print(f"Compensation {frac:.0%}: final mean justice = {final:.3f}")
+class LaggedCouplingSimulation(Simulation):
+    def step(self):
+        # Precompute the coupling deltas from the previous state
+        deltas = {
+            j.id: {"competence": 0.05 * j.state.justice["distributive"]}
+            for j in self.jurisdictions
+        }
+        for j in self.jurisdictions:
+            dC = capability_step(j, self.config, deltas=deltas[j.id])
+            for c, dv in dC.items():
+                j.state.capabilities[c] += dv
+            j.state.clip()
+        # Call super().step() with the capabilities already updated
+        return super().step()
 ```
 
-**What you will find.** Full compensation converges fastest, but with **diminishing returns** — 50% compensation achieves most of the gain because the coupling matrix amplifies partial remedy. This is a substantive finding: reparative justice is not linear. A partial remedy, once recognized as genuine, produces restorative dynamics that exceed its arithmetic contribution.
+Document the override. The paper's §4.2 commits to co-evolution as a *theoretical* property; the specific form is not fixed, and your paper should state the form you used.
 
-**Policy implication.** The choice between 50% and 100% compensation is not merely a matter of resources. It is a matter of **recognition**: whether the remedy is sufficient to establish that the harm is being genuinely addressed. The model makes this threshold effect visible.
+### A new welfare form
 
----
-
-## Application 5: Climate governance — intergenerational analysis
-
-**Question.** How should a jurisdiction balance present development and future obligations?
-
-**Approach.** Model a two-generation system. The present generation chooses a savings rate for the future generation. Explore the trade-off between present welfare and intergenerational justice.
+`WelfareEvaluator` supports two modes. A third — say, lexicographic on the worst-off dimension — would need a subclass:
 
 ```python
-from gsm_governance import (
-    GSMConfig, MultiLevelGovernance, JusticeState, Simulation,
-)
+from gsm_governance import WelfareEvaluator, DIMENSIONS
 
-def simulate_generation(savings_rate):
-    config = GSMConfig()
-    gov = MultiLevelGovernance(config=config)
-
-    gov.add_jurisdiction(
-        "present_generation", level=4,
-        capabilities={"A": 0.70, "C": 0.75, "S": 0.65, "T": 0.60, "L": 0.70},
-        justice=JusticeState({
-            "distributive": 0.60, "procedural": 0.65,
-            "recognition": 0.55, "corrective": 0.30,
-            "intergenerational": 0.30 + savings_rate * 0.5,
-        }),
-    )
-    gov.add_jurisdiction(
-        "future_generation", level=4,
-        justice=JusticeState({
-            "distributive": 0.60 + savings_rate * 0.4,
-            "procedural": 0.50, "recognition": 0.55,
-            "corrective": 0.30,
-            "intergenerational": 0.50 + savings_rate * 0.3,
-        }),
-    )
-
-    # Present generation imposes intergenerational cost
-    sim = Simulation(gov, config=config)
-    sim.set_exploitation("present_generation", "future_generation", {
-        "intergenerational": 0.30 * (1 - savings_rate),
-    })
-
-    hist = sim.run(steps=300)
-    return {
-        "present_justice": gov["present_generation"].state.justice.d["intergenerational"],
-        "future_justice": gov["future_generation"].state.justice.d["intergenerational"],
-        "final_welfare": hist[-1]["W_star"],
-    }
-
-# Sweep savings rate
-for rate in [0.0, 0.3, 0.6, 0.9]:
-    result = simulate_generation(rate)
-    print(f"Savings rate {rate:.1f}: present={result['present_justice']:.3f}, "
-          f"future={result['future_justice']:.3f}, W*={result['final_welfare']:.3f}")
+class LexicographicWelfare(WelfareEvaluator):
+    def welfare(self, jurisdictions, mode=None):
+        # Rank dimensions by the worst-off jurisdiction's value
+        worst = {d: min(j.state.justice[d] for j in jurisdictions)
+                 for d in DIMENSIONS}
+        # Order dimensions from worst-off to best-off
+        ordered = sorted(DIMENSIONS, key=lambda d: worst[d])
+        # Return a vector that supports lexicographic comparison
+        return {
+            "total": sum(worst[d] for d in ordered),  # placeholder
+            "base": sum(worst[d] for d in ordered),
+            "exploitation_penalty": 0.0,
+            "compensation_credit": 0.0,
+            "lexicographic_order": ordered,
+            "worst_off_by_dimension": worst,
+        }
 ```
 
-**What you will find.** Intergenerational justice is not a zero-sum trade-off. Moderate savings rates produce higher long-run welfare than either extreme. Extremely high savings rates harm present welfare enough to trigger prioritarian penalties; extremely low rates harm future welfare and activate C4.
-
-**Interpretive note.** This is the model's answer to the climate policy debate. It does not tell us what savings rate is correct. It shows that the *shape* of the trade-off is not linear and that a moderate approach may dominate both extremes on welfare grounds even before normative considerations.
+The library's design allows this without modifying it. That is the point of keeping normative commitments in `GSMConfig` and the machinery in modules: you can change either without fighting the other.
 
 ---
 
-# Part V — What the model can and cannot do
+## 12. Reference
 
-## 12. What the model does well
+**Config fields.**
 
-**Makes normative commitments explicit.** Every normative parameter — weights, floors, prioritarian coefficients, intervention weights — is a variable the user must specify. Nothing is hidden.
+| Field | Type | Paper section |
+|---|---|---|
+| `alpha`, `beta`, `gamma` | `dict[str, float]` | §4.1 |
+| `gamma_w`, `delta_w`, `weights` | `dict[str, float]` | §4.3 |
+| `welfare_mode` | `"quadratic"` or `"linear_floor"` | §4.3 |
+| `floors`, `aggregate_floor`, `default_tau` | dict, float, float | §3.6 |
+| `phi_vuln`, `phi_d`, `lambda_pd` | float, dict, dict | §3.6, §3.7 |
+| `m_max`, `symmetry` | float, `"symmetric"/"asymmetric"` | §3.3.2–3.3.3 |
+| `kappa_int`, `tau_int`, `omega_k`, `recovery_rate` | float, int, dict, float | §4.1 |
+| `epsilon`, `seed` | float, int | — |
 
-**Represents multi-level interaction.** Vertical and horizontal linkages, subsidiarity, cross-level accountability, and diffusion are all endogenous.
+**Public functions.**
 
-**Distinguishes justice from welfare.** Justice contributes to welfare but is not reducible to it. The model can represent cases where justice is sacrificed for short-term welfare or vice versa.
+| Function | Returns | Paper section |
+|---|---|---|
+| `check_c1(jurisdictions, exploitation, compensation, config)` | `list[tuple[str, str]]` — see §9 Issue 1 | §3.6.1 |
+| `check_c2(jurisdictions, config)` | `list[tuple[str, str, float]]` | §3.6.2 |
+| `check_c3(jurisdictions, config)` | `list[str]` (vulnerable ids) | §3.6.3 |
+| `check_c4(jurisdictions, config)` | `list[tuple[str, str, float]]` | §3.6.4 |
+| `effective_tau(jurisdiction, config)` | `float` | §3.6.3 |
+| `check_all(jurisdictions, exploitation, compensation, config)` | `dict` with `c1`–`c4` keys | §3.6 |
+| `justice_step`, `capability_step` | `dict[str, float]` | §4.1, §4.2 |
+| `WelfareEvaluator(config).welfare(jurisdictions, mode)` | `dict` | §4.3 |
 
-**Represents trade-offs.** The signed interaction matrix captures both synergies and tensions between justice dimensions. This produces realistic path-dependence and non-monotonic trajectories.
+**Module map** (for navigation):
 
-**Enables comparative analysis.** Two configurations can be simulated side by side, isolating the effect of a single parameter or a single constraint.
-
-**Supports policy design.** The frequency ceiling and multi-channel cost model make intervention pacing a first-class concern.
-
-## 13. What the model cannot do
-
-**Decide what justice is.** The model represents consequences of justice specifications. It does not adjudicate between specifications. Users who disagree about what justice requires will run different models and reach different conclusions.
-
-**Eliminate value judgments.** The default parameters reflect specific normative priors (Rawlsian, prioritarian, capability-based). Users should replace them with parameters they can justify.
-
-**Predict real-world outcomes.** The model is a tool for exploring mechanisms, not a forecasting instrument. Its predictions depend on parameters that must be calibrated for each context.
-
-**Represent every nuance.** Five justice dimensions, four constraints, six capabilities. These are simplifications. Real governance systems have finer structure.
-
-**Resolve tragic conflicts.** Where justice and flourishing genuinely conflict, the model represents the trade-off but does not resolve it. Some dilemmas are not solvable by computation.
-
-## 14. What to do with the model
-
-The model is best used as a **structured reasoning tool**. It provides a formal vocabulary for asking questions like:
-
-- What happens if we raise the floor on recognition justice?
-- How long does it take to repair historical injustice under different compensation regimes?
-- Which dimensions of justice have the largest spillover effects on others?
-- Under what conditions does aggressive intervention backfire?
-
-These are questions no single discipline can answer alone. Political theory can specify what justice is; economics can model incentives; systems theory can capture feedback. The model integrates all three.
-
-## 15. Where the framework could go
-
-The natural next steps for researchers using this framework:
-
-- **Empirical calibration** of the interaction matrix $M_J$ from panel data (manuscript Appendix D)
-- **Comparative case studies** of specific countries or regions, with documented justice profiles
-- **Extensions to additional dimensions** (ecological justice, epistemic justice, territorial justice) with theoretical justification
-- **Alternative enforcement mechanisms** (deliberative, market-based, network-based)
-- **Integration with agent-based models** to represent heterogeneous individual behaviour
-- **Applications to international governance** (climate, trade, migration)
-
-The framework is designed to be extended. Its architecture makes normative commitments explicit precisely so that extensions can be debated.
+- `config` — `GSMConfig`, `DIMENSIONS`, `CAPABILITIES`, pair constants
+- `entities` — `State`, `Jurisdiction`
+- `justice` — `JusticeInteractionMatrix` with `m_plus`, `m_minus`, `pair_type()`, `coupling()`
+- `dynamics` — `justice_step`, `capability_step`
+- `constraints` — C1–C4, `effective_tau`
+- `compensation` — `CompensationVector` with `.is_adequate()`
+- `welfare` — `WelfareEvaluator` with quadratic and linear modes
+- `accountability` — `Accountability` with `A` dict
+- `enforcement` — `PolicyInterventionEnforcer`, `Intervention`
+- `simulation` — `Simulation` with `.step()`, `.run(n)`, `.history`
+- `estimation` — `EstimationSpec`, `estimate_MJ` (scaffold, see §9)
+- `data` — `load_stylized_nordic`, `load_stylized_nordic_raw`
 
 ---
 
-# Further reading
+## 13. Further reading
 
-For the mathematical specification of GSM-J:
+**The theory.** Read the paper before running substantive studies. §1.4 for the irreducible core, §2.4 for the ontological status of justice, §3.3.2 for the interaction decomposition, §3.6 for the constraints, §4.3 for the welfare function, §7.5 for the middle-range positioning. The library implements v5; the paper's section numbers are the map.
 
-> Wang, H. H. (2026). *Justice as a Governance Capability: A Computational Systems Model of Multi-Level Governance for Human Flourishing under Bounded Non-Exploitation*. Preprints.org. https://doi.org/10.20944/preprints202609.0964.v2
+**What the library does not do.** §9 above, and the docstrings of `estimate_MJ` and `load_stylized_nordic`. The honest frontier of the library is the honest frontier of the empirical roadmap in §6.3 of the paper. Do not present the illustrative profiles as measurements, and do not present the illustrative exploitation model as a calibration.
 
-For the philosophy underlying the model:
+**The next deliverable.** A model constitutional instrument derived from the same theory is in preparation as a separate document. It translates C1–C4, the pair typing, and the parameterization into enforceable constitutional language. Researchers working on constitutional design should expect it to matter for their work; it is not part of this library.
 
-- Rawls, J. (1971). *A Theory of Justice*. Harvard University Press.
-- Sen, A. (1999). *Development as Freedom*. Oxford University Press.
-- Nussbaum, M. C. (2011). *Creating Capabilities*. Harvard University Press.
-- Fraser, N. (2009). *Scales of Justice*. Columbia University Press.
-- Young, I. M. (1990). *Justice and the Politics of Difference*. Princeton University Press.
-- Pettit, P. (1997). *Republicanism*. Oxford University Press.
-- Gardiner, S. M. (2011). *A Perfect Moral Storm*. Oxford University Press.
-
-For systems and governance theory:
-
-- Ostrom, E. (1990). *Governing the Commons*. Cambridge University Press.
-- Beer, S. (1972). *Brain of the Firm*. Allen Lane.
-- Meadows, D. H. (2008). *Thinking in Systems*. Chelsea Green.
-
-For computational social science:
-
-- Lazer, D., et al. (2020). Computational social science: Obstacles and opportunities. *Science*, 369(6507), 1060–1062.
-- Watts, D. J. (2021). *Computational Social Science*. Cambridge University Press.
-
-For the library:
-
-- Repository: https://github.com/hongxueharriswang/gsm-governance
-- User guide: `docs/user-guide.md`
-- API reference: docstrings in each module
+**Reporting standards.** Follow the paper's Appendix B. Every normative parameter is in `GSMConfig`; report them all. The three innovations the paper calls irreducible are testable — H3, H6, and H8 are the paper's own proposals for how to test them. Design your study to answer one of them, not to reproduce the demonstration.
 
 ---
 
-**End of tutorial.**
+## A closing note on what "research" means here
 
-The model is a tool. It is not a theory of everything. Its value lies in making normative commitments visible and their consequences simulable. Use it to clarify your thinking, not to substitute for it.
+The library is not a study. It is an instrument. The paper's central claim — that justice-centered governance can be modeled precisely enough to be tested — is a claim about what is *possible*, not about what has been *done*. A research project using this library will:
+
+1. Pose a specific question the paper's hypotheses do not answer (e.g., what happens to C4 violations under a specific federal reform?).
+2. Parameterize the theory to match the institutional context.
+3. Run the study, record the results, and report the parameterization and sensitivity.
+4. State what the study cannot conclude — the empirical frontier (no estimation, illustrative profiles, the illustrative exploitation model).
+
+That last step is the one most likely to be skipped and most likely to be caught by a reviewer. Do not skip it. The library was built with an explicit honesty about what it does not do; your paper should be too.
